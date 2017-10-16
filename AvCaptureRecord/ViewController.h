@@ -14,7 +14,7 @@
 
 #import <AssetsLibrary/AssetsLibrary.h>        //<<Can delete if not storing videos to the photo library.  Delete the assetslibrary framework too requires this)
 
-#define CAPTURE_FRAMES_PER_SECOND        20
+#define CAPTURE_FRAMES_PER_SECOND        30
 
 @interface ViewController : UIViewController
 <AVCaptureFileOutputRecordingDelegate>
