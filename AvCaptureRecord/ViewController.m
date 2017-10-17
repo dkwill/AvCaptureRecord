@@ -34,15 +34,34 @@
 
     //ADD VIDEO INPUT
     AVCaptureDevice *VideoDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-   
-    if([VideoDevice isTorchModeSupported:AVCaptureTorchModeOn]) {
-        [VideoDevice lockForConfiguration:nil];
-        //configure frame rate
-        [VideoDevice setActiveVideoMaxFrameDuration:CMTimeMake(1, CAPTURE_FRAMES_PER_SECOND)];
-        [VideoDevice setActiveVideoMinFrameDuration:CMTimeMake(1, CAPTURE_FRAMES_PER_SECOND)];
-        [VideoDevice setTorchMode:AVCaptureTorchModeOn]; // Change to "if necessary"
-        [VideoDevice unlockForConfiguration];
+    
+    
+    
+    BOOL isFPSSupported = NO;
+    AVCaptureDeviceFormat *currentFormat = [VideoDevice activeFormat];
+    for ( AVFrameRateRange *range in currentFormat.videoSupportedFrameRateRanges ) {
+        if ( range.maxFrameRate >= CAPTURE_FRAMES_PER_SECOND && range.minFrameRate <= CAPTURE_FRAMES_PER_SECOND )        {
+            isFPSSupported = YES;
+            break;
+        }
     }
+    
+    if( isFPSSupported ) {
+        if ( [VideoDevice lockForConfiguration:NULL] ) {
+            VideoDevice.activeVideoMaxFrameDuration = CMTimeMake( 1, CAPTURE_FRAMES_PER_SECOND );
+            VideoDevice.activeVideoMinFrameDuration = CMTimeMake( 1, CAPTURE_FRAMES_PER_SECOND );
+            [VideoDevice unlockForConfiguration];
+        }
+    }
+   
+//    if([VideoDevice isTorchModeSupported:AVCaptureTorchModeOn]) {
+//        [VideoDevice lockForConfiguration:nil];
+//        //configure frame rate
+//        [VideoDevice setActiveVideoMaxFrameDuration:CMTimeMake(1, CAPTURE_FRAMES_PER_SECOND)];
+//        [VideoDevice setActiveVideoMinFrameDuration:CMTimeMake(1, CAPTURE_FRAMES_PER_SECOND)];
+//        [VideoDevice setTorchMode:AVCaptureTorchModeOn]; // Change to "if necessary"
+//        [VideoDevice unlockForConfiguration];
+//    }
     
     if (VideoDevice)
     {
