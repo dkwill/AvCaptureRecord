@@ -9,10 +9,24 @@
 
 #import "ViewController.h"
 
-@interface ViewController()
+
+@interface ViewController()<AVCaptureFileOutputRecordingDelegate>
+
+
+@property (nonatomic, strong) AVCaptureSession *captureSession;
+@property (nonatomic, strong) AVCaptureMovieFileOutput *movieFileOutput;
+@property (nonatomic, strong) AVCaptureDeviceFormat *defaultFormat;
+@property (nonatomic, strong) NSURL *fileURL;
+@property (nonatomic, strong) AVCaptureVideoPreviewLayer *previewLayer;
+@property (nonatomic, strong) AVCaptureDevice *videoDevice;
+
 @property (nonatomic,strong)NSMutableArray *saveImages;
 
+@property (nonatomic, strong) AVCaptureConnection *videoConnection;
+
 @end
+
+
 @implementation ViewController
 
 
@@ -26,34 +40,80 @@
     //---------------------------------
     //----- SETUP CAPTURE SESSION -----
     //---------------------------------
+     NSError *error;
+    
     NSLog(@"Setting up capture session");
-    CaptureSession = [[AVCaptureSession alloc] init];
+    self.captureSession = [[AVCaptureSession alloc] init];
+    self.captureSession.sessionPreset = AVCaptureSessionPresetInputPriority;
+    
+    self.videoDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    AVCaptureDeviceInput *videoIn = [AVCaptureDeviceInput deviceInputWithDevice:self.videoDevice error:&error];
+    
+    if (error) {
+        NSLog(@"Video input creation failed");
+      //  return nil;
+    }
+    
+    if (![self.captureSession canAddInput:videoIn]) {
+        NSLog(@"Video input add-to-session failed");
+       // return nil;
+    }
+    [self.captureSession addInput:videoIn];
+    
+    
+    CMTime defaultVideoMinFrameDuration;
+    // save the default format
+    self.defaultFormat = self.videoDevice.activeFormat;
+    defaultVideoMinFrameDuration = self.videoDevice.activeVideoMinFrameDuration;
+    
+    //set output mode?
+    self.movieFileOutput = [[AVCaptureMovieFileOutput alloc] init];
+    [self.captureSession addOutput:self.movieFileOutput];
     
     //----- ADD INPUTS -----
     NSLog(@"Adding video input");
-
+    
+    
+    AVCaptureDeviceFormat *selectedFormat = nil;
+    int32_t maxWidth = 0;
+    AVFrameRateRange *frameRateRange = nil;
+    
+    for (AVCaptureDeviceFormat *format in [self.videoDevice formats]) {
+        
+        for (AVFrameRateRange *range in format.videoSupportedFrameRateRanges) {
+            
+            CMFormatDescriptionRef desc = format.formatDescription;
+            CMVideoDimensions dimensions = CMVideoFormatDescriptionGetDimensions(desc);
+            int32_t width = dimensions.width;
+            
+            if (range.minFrameRate <= CAPTURE_FRAMES_PER_SECOND && CAPTURE_FRAMES_PER_SECOND <= range.maxFrameRate && width >= maxWidth) {
+                
+                selectedFormat = format;
+                frameRateRange = range;
+                maxWidth = width;
+            }
+        }
+    }
     //ADD VIDEO INPUT
-    AVCaptureDevice *VideoDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-    
-    
-    
+   // AVCaptureDevice *VideoDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+
     BOOL isFPSSupported = NO;
-    AVCaptureDeviceFormat *currentFormat = [VideoDevice activeFormat];
+    AVCaptureDeviceFormat *currentFormat = [self.videoDevice activeFormat];
     for ( AVFrameRateRange *range in currentFormat.videoSupportedFrameRateRanges ) {
         if ( range.maxFrameRate >= CAPTURE_FRAMES_PER_SECOND && range.minFrameRate <= CAPTURE_FRAMES_PER_SECOND )        {
             isFPSSupported = YES;
             break;
         }
     }
-    
+
     if( isFPSSupported ) {
-        if ( [VideoDevice lockForConfiguration:NULL] ) {
-            VideoDevice.activeVideoMaxFrameDuration = CMTimeMake( 1, CAPTURE_FRAMES_PER_SECOND );
-            VideoDevice.activeVideoMinFrameDuration = CMTimeMake( 1, CAPTURE_FRAMES_PER_SECOND );
-            [VideoDevice unlockForConfiguration];
+        if ( [self.videoDevice lockForConfiguration:NULL] ) {
+            self.videoDevice.activeVideoMaxFrameDuration = CMTimeMake( 1, CAPTURE_FRAMES_PER_SECOND );
+            self.videoDevice.activeVideoMinFrameDuration = CMTimeMake( 1, CAPTURE_FRAMES_PER_SECOND );
+            [self.videoDevice unlockForConfiguration];
         }
     }
-   
+//
 //    if([VideoDevice isTorchModeSupported:AVCaptureTorchModeOn]) {
 //        [VideoDevice lockForConfiguration:nil];
 //        //configure frame rate
@@ -63,44 +123,46 @@
 //        [VideoDevice unlockForConfiguration];
 //    }
     
-    if (VideoDevice)
-    {
-        NSError *error;
-        VideoInputDevice = [AVCaptureDeviceInput deviceInputWithDevice:VideoDevice error:&error];
-        if (!error)
-        {
-            if ([CaptureSession canAddInput:VideoInputDevice])
-                [CaptureSession addInput:VideoInputDevice];
-            else
-                NSLog(@"Couldn't add video input");
-        }
-        else
-        {
-            NSLog(@"Couldn't create video input");
-        }
-    }
-    else
-    {
-        NSLog(@"Couldn't create video capture device");
-    }
+//    if (VideoDevice)
+//    {
+//        NSError *error;
+//        VideoInputDevice = [AVCaptureDeviceInput deviceInputWithDevice:VideoDevice error:&error];
+//        if (!error)
+//        {
+//            if ([CaptureSession canAddInput:VideoInputDevice])
+//                [CaptureSession addInput:VideoInputDevice];
+//            else
+//                NSLog(@"Couldn't add video input");
+//        }
+//        else
+//        {
+//            NSLog(@"Couldn't create video input");
+//        }
+//    }
+//    else
+//    {
+//        NSLog(@"Couldn't create video capture device");
+//    }
  
+    //CGFloat desiredFps = 240;;
+    //[self.captureManager switchFormatWithDesiredFPS:desiredFps];
  
     //ADD AUDIO INPUT
-    NSLog(@"Adding audio input");
-    AVCaptureDevice *audioCaptureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
-    NSError *error = nil;
-    AVCaptureDeviceInput *audioInput = [AVCaptureDeviceInput deviceInputWithDevice:audioCaptureDevice error:&error];
-    if (audioInput)
-    {
-        [CaptureSession addInput:audioInput];
-    }
+//    NSLog(@"Adding audio input");
+//    AVCaptureDevice *audioCaptureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
+//   // NSError *error = nil;
+//    AVCaptureDeviceInput *audioInput = [AVCaptureDeviceInput deviceInputWithDevice:audioCaptureDevice error:&error];
+//    if (audioInput)
+//    {
+//        [CaptureSession addInput:audioInput];
+//    }
 //*/
     
     //----- ADD OUTPUTS -----
     
     //ADD VIDEO PREVIEW LAYER
     NSLog(@"Adding video preview layer");
-    [self setPreviewLayer:[[AVCaptureVideoPreviewLayer alloc] initWithSession:CaptureSession] ];
+    [self setPreviewLayer:[[AVCaptureVideoPreviewLayer alloc] initWithSession:_captureSession] ];
     
     _PreviewLayer.orientation = AVCaptureVideoOrientationLandscapeLeft;        //SET ORIENTATION.  You can deliberatly set this wrong to flip the image and may actually need to set it wrong to get the right image
     
@@ -109,17 +171,17 @@
     
     //ADD MOVIE FILE OUTPUT
     NSLog(@"Adding movie file output");
-    MovieFileOutput = [[AVCaptureMovieFileOutput alloc] init];
+    //self.movieFileOutput = [[AVCaptureMovieFileOutput alloc] init];
     
     Float64 TotalSeconds = 60;            //Total seconds
     int32_t preferredTimeScale = CAPTURE_FRAMES_PER_SECOND;    //Frames per second
     CMTime maxDuration = CMTimeMakeWithSeconds(TotalSeconds, preferredTimeScale);    //SET MAX DURATION
-    MovieFileOutput.maxRecordedDuration = maxDuration;
+    self.movieFileOutput.maxRecordedDuration = maxDuration;
     
-    MovieFileOutput.minFreeDiskSpaceLimit = 1024 * 1024;                        //SET MIN FREE SPACE IN BYTES FOR RECORDING TO CONTINUE ON A VOLUME
+    self.movieFileOutput.minFreeDiskSpaceLimit = 1024 * 1024;                        //SET MIN FREE SPACE IN BYTES FOR RECORDING TO CONTINUE ON A VOLUME
     
-    if ([CaptureSession canAddOutput:MovieFileOutput])
-        [CaptureSession addOutput:MovieFileOutput];
+    if ([self.captureSession canAddOutput:_movieFileOutput])
+        [self.captureSession addOutput:_movieFileOutput];
     
     //SET THE CONNECTION PROPERTIES (output properties)
     [self CameraSetOutputProperties];            //(We call a method as it also has to be done after changing camera)
@@ -134,10 +196,13 @@
     //    AVCaptureSessionPreset640x480 - 640x480 VGA (check its supported before setting it)
     //    AVCaptureSessionPreset1280x720 - 1280x720 720p HD (check its supported before setting it)
     //    AVCaptureSessionPresetPhoto - Full photo resolution (not supported for video output)
-    NSLog(@"Setting image quality");
-    [CaptureSession setSessionPreset:AVCaptureSessionPresetHigh];
-    if ([CaptureSession canSetSessionPreset:AVCaptureSessionPreset640x480])        //Check size based configs are supported before setting them
-        [CaptureSession setSessionPreset:AVCaptureSessionPreset640x480];
+    
+    //NSLog(@"Setting image quality");
+    
+    [self.captureSession setSessionPreset:AVCaptureSessionPresetHigh];
+    if ([self.captureSession canSetSessionPreset:AVCaptureSessionPreset640x480])        //Check size based configs are supported before setting them
+        [self.captureSession setSessionPreset:AVCaptureSessionPreset640x480];
+    
     
     
     
@@ -158,7 +223,7 @@
     
     
     //----- START THE CAPTURE SESSION RUNNING -----
-    [CaptureSession startRunning];
+    [self.captureSession startRunning];
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
@@ -184,7 +249,7 @@
 - (void) CameraSetOutputProperties
 {
     //SET THE CONNECTION PROPERTIES (output properties)
-    AVCaptureConnection *CaptureConnection = [MovieFileOutput connectionWithMediaType:AVMediaTypeVideo];
+    AVCaptureConnection *CaptureConnection = [self.movieFileOutput connectionWithMediaType:AVMediaTypeVideo];
     
     //Set landscape (if required)
     if ([CaptureConnection isVideoOrientationSupported])
@@ -193,18 +258,7 @@
         [CaptureConnection setVideoOrientation:orientation];
     }
     
-    //Set frame rate (if requried)
     
-//    CMTimeShow(CaptureConnection.videoMinFrameDuration);
-//    CMTimeShow(CaptureConnection.videoMaxFrameDuration);
-//
-//    if (CaptureConnection.supportsVideoMinFrameDuration)
-//        CaptureConnection.videoMinFrameDuration = CMTimeMake(1, CAPTURE_FRAMES_PER_SECOND);
-//    if (CaptureConnection.supportsVideoMaxFrameDuration)
-//        CaptureConnection.videoMaxFrameDuration = CMTimeMake(1, CAPTURE_FRAMES_PER_SECOND);
-//
-//    CMTimeShow(CaptureConnection.videoMinFrameDuration);
-//    CMTimeShow(CaptureConnection.videoMaxFrameDuration);
 }
 
 //********** GET CAMERA IN SPECIFIED POSITION IF IT EXISTS **********
@@ -228,47 +282,83 @@
     
     if (!WeAreRecording)
     {
+        ///*
         //----- START RECORDING -----
         NSLog(@"START RECORDING");
         WeAreRecording = YES;
         
         //Create temporary URL to record to
-        NSString *outputPath = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
-        NSURL *outputURL = [[NSURL alloc] initFileURLWithPath:outputPath];
-        NSFileManager *fileManager = [NSFileManager defaultManager];
-        if ([fileManager fileExistsAtPath:outputPath])
-        {
-            NSError *error;
-            if ([fileManager removeItemAtPath:outputPath error:&error] == NO)
-            {
-                //Error - handle if requried
-            }
-        }
+        NSDateFormatter* formatter = [[NSDateFormatter alloc] init];
+        [formatter setDateFormat:@"yyyy-MM-dd-HH-mm-ss"];
+        NSString* dateTimePrefix = [formatter stringFromDate:[NSDate date]];
+        
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        NSString *documentsDirectory = [paths objectAtIndex:0];
+        
+       // if (currentOutputMode == OutputModeMovieFile) {
+            
+            int fileNamePostfix = 0;
+            NSString *filePath = nil;
+        
+        filePath =[NSString stringWithFormat:@"/%@/%@-%i.mp4", documentsDirectory, dateTimePrefix, fileNamePostfix++];
+        while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]);
+        
+        self.fileURL = [NSURL URLWithString:[@"file://" stringByAppendingString:filePath]];
+        
+       // [self.movieFileOutput startRecordingToOutputFileURL:self.fileURL recordingDelegate:self];
+        
+        
+        
+        
+//        NSString *outputPath = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
+//        NSURL *outputURL = [[NSURL alloc] initFileURLWithPath:outputPath];
+//        NSFileManager *fileManager = [NSFileManager defaultManager];
+//        if ([fileManager fileExistsAtPath:outputPath])
+//        {
+//            NSError *error;
+//            if ([fileManager removeItemAtPath:outputPath error:&error] == NO)
+//            {
+//                //Error - handle if requried
+//            }
+//        }
      //   [outputPath release];
         //Start recording
-        [MovieFileOutput startRecordingToOutputFileURL:outputURL recordingDelegate:self];
+        [_movieFileOutput startRecordingToOutputFileURL:_fileURL recordingDelegate:self];
       //  [outputURL release];
-    }
+   
+ // */
+  }
+         
     else
     {
+        
         //----- STOP RECORDING -----
         NSLog(@"STOP RECORDING");
         WeAreRecording = NO;
         
-        [MovieFileOutput stopRecording];
+        [_movieFileOutput stopRecording];
+        //from other file
+        
+                   dispatch_async(dispatch_get_main_queue(), ^{
+
+                       if ([self.delegate respondsToSelector:@selector(didFinishRecordingToOutputFileAtURL:error:)]) {
+                           [self.delegate didFinishRecordingToOutputFileAtURL:self.fileURL error:nil];
+                        }
+                      });
+        
     }
 }
 
 
-//********** DID FINISH RECORDING TO OUTPUT FILE AT URL **********
+////********** DID FINISH RECORDING TO OUTPUT FILE AT URL **********
 - (void)captureOutput:(AVCaptureFileOutput *)captureOutput
 didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
       fromConnections:(NSArray *)connections
                 error:(NSError *)error
 {
-    
+
     NSLog(@"didFinishRecordingToOutputFileAtURL - enter");
-    
+
     BOOL RecordedSuccessfully = YES;
     if ([error code] != noErr)
     {
@@ -291,16 +381,19 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
              {
                  if (error)
                  {
-                     
+
                  }
              }];
         }
-        
-      //  [library release];
-        
+
+       // [library release];
+
     }
+
     [self processBuffer];
 }
+
+
 -(void)getLastImage{
     UIImage *image1 = [_saveImages objectAtIndex:0];
     UIImage *image2 = [_saveImages objectAtIndex:1];
@@ -312,30 +405,37 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
 -(void)processBuffer{
     
     
-    NSString *filePathString = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
-    NSURL *movieUrl=[[NSURL alloc] initFileURLWithPath:filePathString];
-    AVURLAsset *movieAsset=[[AVURLAsset alloc] initWithURL:movieUrl options:nil];
-
+    // NSString *filePathString = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
+    //  NSURL *movieUrl=[[NSURL alloc] initFileURLWithPath:filePathString];
+    AVURLAsset *movieAsset=[[AVURLAsset alloc] initWithURL:_fileURL options:nil];
+    
+    AVAssetTrack * videoAssetTrack = [movieAsset tracksWithMediaType: AVMediaTypeVideo].firstObject;
+    NSLog(@"FPS is  : %f ", videoAssetTrack.nominalFrameRate);
+    
+    _saveImages = [[NSMutableArray alloc]init];
+    
+    
     AVAssetImageGenerator *generate = [[AVAssetImageGenerator alloc] initWithAsset:movieAsset];
     generate.appliesPreferredTrackTransform = YES;
     NSError *err = NULL;
     CMTime videoDuration = movieAsset.duration;
     float videoDurationSeconds = CMTimeGetSeconds(videoDuration);
     int frames=(int)videoDurationSeconds*CAPTURE_FRAMES_PER_SECOND;
-   // float lastFrameTime = CMTimeGetSeconds(movieAsset.duration)*60.0;
+    // float lastFrameTime = CMTimeGetSeconds(movieAsset.duration)*60.0;
     
     generate.requestedTimeToleranceBefore = kCMTimeZero;
     generate.requestedTimeToleranceAfter = kCMTimeZero;
-
+    
     NSMutableArray *timesm=[[NSMutableArray alloc]init];
     for (int i=(frames-5); i<frames; i++) {
         CMTime time = CMTimeMakeWithSeconds(videoDurationSeconds *i/(float)frames, frames);
-       // CMTime time = CMTimeMake(videoDurationSeconds *i/(float)frames, frames);
-
+        // CMTime time = CMTimeMake(videoDurationSeconds *i/(float)frames, frames);
+        
         [timesm addObject:[NSValue valueWithCMTime:time]];
-
+        
     }
-
+    
+    
 
     [generate generateCGImagesAsynchronouslyForTimes:timesm
                                     completionHandler:^(CMTime requestedTime, CGImageRef image, CMTime actualTime, AVAssetImageGeneratorResult result, NSError *error) {
@@ -385,201 +485,35 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
                                         }
 
                                     }];
-    
- 
-    
-    //    NSString *filePathString = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
-    //    NSURL *movieUrl=[[NSURL alloc] initFileURLWithPath:filePathString];
-    //    AVURLAsset *movieAsset=[[AVURLAsset alloc] initWithURL:movieUrl options:nil];
-    //    CMTime actualTime;
-    //    CMTime videoDuration = movieAsset.duration;
-    //    AVAssetImageGenerator *generate = [AVAssetImageGenerator assetImageGeneratorWithAsset:movieAsset];
-    //    generate.appliesPreferredTrackTransform = YES;
-    //    NSError *error1;
-    //    // int64_t lastFrameTime = CMTimeGetSeconds(movieAsset.duration)*60.0;
-    //   // float lastFrameTime = CMTimeGetSeconds(movieAsset.duration)*60.0;
-    //    float videoDurationSeconds = CMTimeGetSeconds(videoDuration);
-    //    int frames=(int)videoDurationSeconds*CAPTURE_FRAMES_PER_SECOND;
-    //
-    //    generate.requestedTimeToleranceBefore = kCMTimeZero;
-    //    generate.requestedTimeToleranceAfter = kCMTimeZero;
-    //
-    // //   CMTime time = CMTimeMake(lastFrameTime, CAPTURE_FRAMES_PER_SECOND);
-    //    CMTime time = CMTimeMakeWithSeconds(videoDurationSeconds *1/(float)frames, frames);
-    //    CGImageRef imgRef1 = [generate copyCGImageAtTime:time actualTime:&actualTime error:&error1];
-    //    UIImage *image1 = [UIImage imageWithCGImage:imgRef1];
-    //
-    //
-    //    time = CMTimeMakeWithSeconds(videoDurationSeconds *2/(float)frames, frames);
-    //    CGImageRef imgRef2 = [generate copyCGImageAtTime:time actualTime:&actualTime error:&error1];
-    //    UIImage *image2 = [UIImage imageWithCGImage:imgRef2];
-    //
-    //    time = CMTimeMakeWithSeconds(videoDurationSeconds *3/(float)frames, frames);
-    //    CGImageRef imgRef3 = [generate copyCGImageAtTime:time actualTime:&actualTime error:&error1];
-    //    UIImage *image3 = [UIImage imageWithCGImage:imgRef3];
-    //
-    //    time = CMTimeMakeWithSeconds(videoDurationSeconds *4/(float)frames, frames);
-    //    CGImageRef imgRef4 = [generate copyCGImageAtTime:time actualTime:&actualTime error:&error1];
-    //    UIImage *image4 = [UIImage imageWithCGImage:imgRef4];
-    //
-    //    time = CMTimeMakeWithSeconds(videoDurationSeconds *5/(float)frames, frames);
-    //    CGImageRef imgRef5 = [generate copyCGImageAtTime:time actualTime:&actualTime error:&error1];
-    //    UIImage *image5 = [UIImage imageWithCGImage:imgRef5];
-    
-    
-    
-    
-    
-//    NSMutableArray *timeList = [[NSMutableArray alloc]init];
-////
-//    NSString *filePathString = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
-//    AVURLAsset *movieAsset=[[AVURLAsset alloc] initWithURL:videoUrl options:nil];
-//
-//        AVAssetImageGenerator *generate1 = [[AVAssetImageGenerator alloc] initWithAsset:movieAsset];
-//        generate1.appliesPreferredTrackTransform = YES;
-//        NSError *err = NULL;
-//        CMTime videoDuration = movieAsset.duration;
-//        float videoDurationSeconds = CMTimeGetSeconds(videoDuration);
-//        int frames=(int)videoDurationSeconds*30;
-//
-//        generate1.requestedTimeToleranceAfter = CMTimeMakeWithSeconds(1/30.0, videoDuration.timescale);
-//        generate1.requestedTimeToleranceBefore = CMTimeMakeWithSeconds(1/30.0, videoDuration.timescale);
-//
-//        NSMutableArray *timesm=[[NSMutableArray alloc]init];
-//        for (int i=frames-5; i<frames; i++) {
-//            CMTime firstThird = CMTimeMake( i * (videoDuration.timescale / 30.0f), videoDuration.timescale);
-//            [timesm addObject:[NSValue valueWithCMTime:firstThird]];
-//
-//            UIImage* myImage = [[UIImage alloc] initWithCGImage:image];
-//        }
-    
-    
-//    AVURLAsset *movieAsset = [[AVURLAsset alloc] initWithURL:videoUrl options:nil];
-//    AVAssetImageGenerator *generateImg = [[AVAssetImageGenerator alloc] initWithAsset:movieAsset];
-//
-//    NSMutableArray *pictList = [NSMutableArray array];
-//    for (int i = 0; i < timeList.count; i++) {
-//        NSError *error = NULL;
-//        CMTime time = CMTimeMake([[timeList objectAtIndex:i] intValue], 1000);
-//        CGImageRef refImg = [generateImg copyCGImageAtTime:time actualTime:NULL error:&error];
-//        NSLog(@"error==%@, Refimage==%@", error, refImg);
-//
-//        [pictList addObject:[[UIImage alloc] initWithCGImage:refImg]];
-//    }
-    
-    
-    
-    
-  //  AVURLAsset *asset = [[AVURLAsset alloc] initWithURL:videoUrl options:nil];
-    //AVAssetImageGenerator *generateImg = [[AVAssetImageGenerator alloc] initWithAsset:movieAsset];
-    
-//    AVAssetImageGenerator *generateImg = [[AVAssetImageGenerator alloc] initWithAsset:movieAsset];
-//    generateImg.requestedTimeToleranceBefore = kCMTimeZero;
-//    generateImg.requestedTimeToleranceAfter = kCMTimeZero;
-//
-//    NSMutableArray *pictList = [NSMutableArray array];
-//    for (int i = 0; i < timeList.count; i++) {
-//        NSError *error = NULL;
-//        CMTime time = CMTimeMake([[timeList objectAtIndex:i] intValue], 1000);
-//        CGImageRef refImg = [generateImg copyCGImageAtTime:time actualTime:NULL error:&error];
-//        //NSLog(@"error==%@, Refimage==%@", error, refImg);
-//
-//        [pictList addObject:[[UIImage alloc] initWithCGImage:refImg]];
-//    }
-    
-    
-    
-    
-    
-    
-    
-    
-    
 
-//
-//
-//
-//
-//    [generate1 generateCGImagesAsynchronouslyForTimes:timesm
-//                                    completionHandler:^(CMTime requestedTime, CGImageRef image, CMTime actualTime, AVAssetImageGeneratorResult result, NSError *error) {
-//
-//                                        UIImage* myImage = [[UIImage alloc] initWithCGImage:image];
-//                                        [imagesArray addObject:myImage];
-//                                        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-//                                      //  NSString *documentsDirectory = [paths objectAtIndex:0];
-//                                     //   NSString *savedImagePath = [documentsDirectory stringByAppendingPathComponent:[NSString stringWithFormat:@"ankur-%@ %i.jpg",image,(int)[[NSDate date] timeIntervalSince1970]]];
-//                                     //   NSData *imageData = UIImageJPEGRepresentation(myImage,0.7);
-//                                      //  [imageData writeToFile:savedImagePath atomically:NO];
-//
-//
-//                                        NSString *requestedTimeString = (NSString *)
-//
-//                                        CFBridgingRelease(CMTimeCopyDescription(NULL, requestedTime));
-//
-//                                        NSString *actualTimeString = (NSString *)
-//
-//                                        CFBridgingRelease(CMTimeCopyDescription(NULL, actualTime));
-//
-//                                        NSLog(@"Requested: %@; actual %@", requestedTimeString, actualTimeString);
-//
-//                                        if (result == AVAssetImageGeneratorSucceeded) {
-//
-//                                            // Do something interesting with the image.
-//                                        }
-//
-//
-//                                        if (result == AVAssetImageGeneratorFailed) {
-//
-//                                            NSLog(@"Failed with error: %@", [error localizedDescription]);
-//                                        }
-//
-//                                        if (result == AVAssetImageGeneratorCancelled) {
-//
-//                                            NSLog(@"Canceled");
-//
-//                                        }
-//
-//                                    }];
-//
-    
-    
-   // }
-
-    
-    
-    
-    
-    
-//        NSString *filePathString = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
-//        NSURL *movieUrl=[[NSURL alloc] initFileURLWithPath:filePathString];
-//        AVURLAsset *movieAsset=[[AVURLAsset alloc] initWithURL:movieUrl options:nil];
-//        CMTime actualTime;
-//        AVAssetImageGenerator *generate = [AVAssetImageGenerator assetImageGeneratorWithAsset:movieAsset];
-//        generate.appliesPreferredTrackTransform = YES;
-//        NSError *error1;
-//        int64_t lastFrameTime = CMTimeGetSeconds(movieAsset.duration)*60.0;
-//
-//        CMTime time1 = CMTimeMake(lastFrameTime, CAPTURE_FRAMES_PER_SECOND);
-//        CGImageRef imgRef1 = [generate copyCGImageAtTime:time1 actualTime:&actualTime error:&error1];
-//        UIImage *image1 = [UIImage imageWithCGImage:imgRef1];
-//
-//        CMTime time2  = CMTimeMake(lastFrameTime, CAPTURE_FRAMES_PER_SECOND * 2);
-//        CGImageRef imgRef2  = [generate copyCGImageAtTime:time2 actualTime:&actualTime error:&error1];
-//        UIImage *image2 = [UIImage imageWithCGImage:imgRef2];
-//
-//        CMTime time3 = CMTimeMake(lastFrameTime, CAPTURE_FRAMES_PER_SECOND * 3);
-//        CGImageRef imgRef3 = [generate copyCGImageAtTime:time3 actualTime:&actualTime error:&error1];
-//        UIImage *image3 = [UIImage imageWithCGImage:imgRef3];
-//
-//        CMTime time4 = CMTimeMake(lastFrameTime, CAPTURE_FRAMES_PER_SECOND * 4);
-//        CGImageRef  imgRef4 = [generate copyCGImageAtTime:time4 actualTime:&actualTime error:&error1];
-//        UIImage *image4 = [UIImage imageWithCGImage:imgRef4];
-//
-//        CMTime time5 = CMTimeMake(lastFrameTime, CAPTURE_FRAMES_PER_SECOND * 5);
-//        CGImageRef imgRef5 = [generate copyCGImageAtTime:time5 actualTime:&actualTime error:&error1];
-//        UIImage *image5 = [UIImage imageWithCGImage:imgRef5];
-//
     
     
 }
+
+// =============================================================================
+#pragma mark - AVCaptureFileOutputRecordingDelegate
+
+- (void)                 captureOutput:(AVCaptureFileOutput *)captureOutput
+    didStartRecordingToOutputFileAtURL:(NSURL *)fileURL
+                       fromConnections:(NSArray *)connections
+{
+    _isRecording = YES;
+}
+
+//- (void)                 captureOutput:(AVCaptureFileOutput *)captureOutput
+//   didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
+//                       fromConnections:(NSArray *)connections error:(NSError *)error
+//{
+//    //    [self saveRecordedFile:outputFileURL];
+//    _isRecording = NO;
+//
+//    if ([self.delegate respondsToSelector:@selector(didFinishRecordingToOutputFileAtURL:error:)]) {
+//        [self.delegate didFinishRecordingToOutputFileAtURL:outputFileURL error:error];
+//
+//       // [self processBuffer];
+//    }
+//}
+
+
+// =============================================================================
 @end
