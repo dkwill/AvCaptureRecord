@@ -11,10 +11,33 @@
 #import <Foundation/Foundation.h>
 #import <CoreMedia/CoreMedia.h>
 #import <AVFoundation/AVFoundation.h>
+#import <AssetsLibrary/AssetsLibrary.h> 
 
+//#define CAPTURE_FRAMES_PER_SECOND  240
+#define CAPTURE_FRAMES_PER_SECOND  240
+    BOOL WeAreRecording;
+
+
+
+@protocol TTMCaptureManagerDelegate <NSObject>
+- (void)didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
+                                      error:(NSError *)error;
+
+@end
+
+@interface ViewController : UIViewController
+
+@property (nonatomic, assign) id<TTMCaptureManagerDelegate> delegate;
+
+@end
+
+
+/*
 #import <AssetsLibrary/AssetsLibrary.h>        //<<Can delete if not storing videos to the photo library.  Delete the assetslibrary framework too requires this)
 
 #define CAPTURE_FRAMES_PER_SECOND  240
+
+
 
 typedef NS_ENUM(NSUInteger, CameraType) {
     CameraTypeBack,
@@ -51,3 +74,4 @@ typedef NS_ENUM(NSUInteger, OutputMode) {
 - (IBAction)CameraToggleButtonPressed:(id)sender;
 
 @end
+*/

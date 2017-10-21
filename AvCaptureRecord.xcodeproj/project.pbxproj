@@ -13,6 +13,10 @@
 		CFA665001F86CE290079BCA4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CFA664FF1F86CE290079BCA4 /* Assets.xcassets */; };
 		CFA665031F86CE290079BCA4 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CFA665011F86CE290079BCA4 /* LaunchScreen.storyboard */; };
 		CFA665061F86CE290079BCA4 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = CFA665051F86CE290079BCA4 /* main.m */; };
+		CFD10AE91F9A756D006B40B3 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CFD10AE81F9A756D006B40B3 /* AVFoundation.framework */; };
+		CFD10AEB1F9A7591006B40B3 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CFD10AEA1F9A7591006B40B3 /* CoreMedia.framework */; };
+		CFD10AED1F9A7599006B40B3 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CFD10AEC1F9A7599006B40B3 /* UIKit.framework */; };
+		CFD10AEF1F9A75B9006B40B3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CFD10AEE1F9A75B9006B40B3 /* Foundation.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +30,10 @@
 		CFA665021F86CE290079BCA4 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		CFA665041F86CE290079BCA4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		CFA665051F86CE290079BCA4 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		CFD10AE81F9A756D006B40B3 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		CFD10AEA1F9A7591006B40B3 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+		CFD10AEC1F9A7599006B40B3 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		CFD10AEE1F9A75B9006B40B3 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -33,6 +41,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CFD10AEF1F9A75B9006B40B3 /* Foundation.framework in Frameworks */,
+				CFD10AED1F9A7599006B40B3 /* UIKit.framework in Frameworks */,
+				CFD10AEB1F9A7591006B40B3 /* CoreMedia.framework in Frameworks */,
+				CFD10AE91F9A756D006B40B3 /* AVFoundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -44,6 +56,7 @@
 			children = (
 				CFA664F51F86CE290079BCA4 /* AvCaptureRecord */,
 				CFA664F41F86CE290079BCA4 /* Products */,
+				CFD10AE71F9A756D006B40B3 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -69,6 +82,17 @@
 				CFA665051F86CE290079BCA4 /* main.m */,
 			);
 			path = AvCaptureRecord;
+			sourceTree = "<group>";
+		};
+		CFD10AE71F9A756D006B40B3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CFD10AEE1F9A75B9006B40B3 /* Foundation.framework */,
+				CFD10AEC1F9A7599006B40B3 /* UIKit.framework */,
+				CFD10AEA1F9A7591006B40B3 /* CoreMedia.framework */,
+				CFD10AE81F9A756D006B40B3 /* AVFoundation.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
